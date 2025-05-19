@@ -1,4 +1,11 @@
 # MPG_experiments
+python3 -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+
+
 
 The files in this folder generate the plots for the experimental section of the paper (main part and supplementary material).
 
