@@ -135,12 +135,14 @@ def policy_gradient(mu, max_iters, gamma, eta, T, samples):
                 policy[st, agent] = projection_simplex_sort(np.add(policy[st, agent], eta[agent] * grads[agent,st]), z=1)
         policy_hist.append(copy.deepcopy(policy))
 
-        if policy_accuracy(policy_hist[t], policy_hist[t-1]) < 10e-16:
-      # if policy_accuracy(policy_hist[t+1], policy_hist[t]) < 10e-16: (it makes a difference, not when t=0 but from t=1 onwards.)
-            return policy_hist
+        # # 提早結束並補齊長度
+        # if policy_accuracy(policy_hist[t], policy_hist[t-1]) < 1e-16:
+        #     last_policy = policy_hist[-1]
+        #     while len(policy_hist) < max_iters + 1:  # +1 是因為第 0 策略也算
+        #         policy_hist.append(copy.deepcopy(last_policy))
+        #     return policy_hist
 
     return policy_hist
-
 
 def get_accuracies(policy_hist):
     fin = policy_hist[-1]

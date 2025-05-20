@@ -18,11 +18,15 @@ iters = range(len(lrs_mean))
 
 # === Plot 1: Accuracy Mean + Std ===
 plt.figure(figsize=(8, 5))
-plt.plot(iters, lrs_mean, label='Policy Gradient', color='blue')
+plt.plot(iters, lrs_mean, label='Policy Gradient lrs', color='blue')
 plt.fill_between(iters, lrs_mean - lrs_std, lrs_mean + lrs_std, color='blue', alpha=0.3)
+
+plt.plot(iters, ord_mean, label='Policy Gradient ord', color="#BE77FF")
+plt.fill_between(iters, ord_mean - ord_std, ord_mean + ord_std, color="#BE77FF" , alpha=0.3)
 
 plt.plot(iters, ql_mean, label='Q-Learning UCB', color='green')
 plt.fill_between(iters, ql_mean - ql_std, ql_mean + ql_std, color='green', alpha=0.3)
+
 
 plt.xlabel("Iterations")
 plt.ylabel("L1 Accuracy")

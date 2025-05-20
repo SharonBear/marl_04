@@ -348,7 +348,7 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
 
 if __name__ == '__main__':
     start = process_time()
-    q_learning_ucb_experiment(N=8, H=20, M=500, epsilon=0.1, runs=10)
+    q_learning_ucb_experiment(N=8, H=20, M=1001, epsilon=0.1, runs=10)
     print("Done. Time elapsed:", process_time() - start)
 
 
