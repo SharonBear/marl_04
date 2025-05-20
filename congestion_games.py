@@ -40,27 +40,27 @@ def get_reward(cong_game, actions):
 		rewards[i] = get_agent_reward(cong_game, actions, actions[i])
 	return rewards
 
-def get_next_state(state, actions):
-    N = len(actions)
-    act_dic = {}
-    counter = 0
-    m = len(actions[0])
-    all_facilities = list(set(f for a in actions for f in a))
-    for act in it.chain.from_iterable(it.combinations(all_facilities, r) for r in range(1, m + 1)):
-        act_dic[counter] = act
-        counter += 1
+# def get_next_state(state, actions):
+#     N = len(actions)
+#     act_dic = {}
+#     counter = 0
+#     m = len(actions[0])
+#     all_facilities = list(set(f for a in actions for f in a))
+#     for act in it.chain.from_iterable(it.combinations(all_facilities, r) for r in range(1, m + 1)):
+#         act_dic[counter] = act
+#         counter += 1
 
-    acts_from_ints = [act_dic[i] if isinstance(i, int) else i for i in actions]
-    density = state_dic[state].get_counts(acts_from_ints)
-    max_density = max(density)
+#     acts_from_ints = [act_dic[i] if isinstance(i, int) else i for i in actions]
+#     density = state_dic[state].get_counts(acts_from_ints)
+#     max_density = max(density)
 
-    if state == 0 and max_density > N / 2 or state == 1 and max_density > N / 4:
-        return 1
-    return 0
+#     if state == 0 and max_density > N / 2 or state == 1 and max_density > N / 4:
+#         return 1
+#     return 0
 
-# Construct action dictionary globally
-act_dic = {}
-def build_act_dic(game):
-    global act_dic
-    act_dic = {i: act for i, act in enumerate(game.actions)}
+# # Construct action dictionary globally
+# act_dic = {}
+# def build_act_dic(game):
+#     global act_dic
+#     act_dic = {i: act for i, act in enumerate(game.actions)}
 

@@ -233,7 +233,10 @@ def full_experiment(runs,iters,eta,T,samples):
     fig3.savefig('./pic/ord/facilities_n{}.png'.format(N),bbox_inches='tight')
    #plt.close()
     plt.show()
-
+    np.save("./npy/ord/ord_accuracies.npy", plot_accuracies)
+    np.save("./npy/ord/ord_avg_mean.npy", np.array(pmean))
+    np.save("./npy/ord/ord_avg_std.npy", np.array(pstdv))
+    np.save("./npy/ord/ord_facility_density.npy", densities)
     return fig1, fig2, fig3
 
 #full_experiment(10,1000,0.0001,20,10)
