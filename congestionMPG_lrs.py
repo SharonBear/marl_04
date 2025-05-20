@@ -162,6 +162,8 @@ def full_experiment(runs,iters,eta,T,samples):
                 densities[s] += converged_policy[s,i]
 
     densities = densities / runs
+    # 儲存 .npy 結果
+
 
     #densities = densities / runs
 
@@ -176,6 +178,7 @@ def full_experiment(runs,iters,eta,T,samples):
     #     plot_accuracies[j][:j_len] = raw_accuracies[j]
     
     plot_accuracies = np.array(list(itertools.zip_longest(*raw_accuracies, fillvalue=np.nan))).T
+    
     clrs = sns.color_palette("husl", 3)
     piters = list(range(plot_accuracies.shape[1]))
 
@@ -227,7 +230,10 @@ def full_experiment(runs,iters,eta,T,samples):
     plt.show()
     fig3.savefig('./pic/lrs/facilities_n{}random.png'.format(N),bbox_inches='tight')
     plt.close()   
-
+    np.save("./npy/lrs/lrs_accuracies.npy", plot_accuracies)
+    np.save("./npy/lrs/lrs_avg_mean.npy", np.array(pmean))
+    np.save("./npy/lrs/lrs_avg_std.npy", np.array(pstdv))
+    np.save("./npy/lrs/lrs_facility_density.npy", densities)
     return fig1, fig2, fig3
 
 eta = [np.random.uniform(.00005, .0005) for i in range(N)]

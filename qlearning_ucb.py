@@ -282,6 +282,11 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
         all_accuracies.append(run_accs)
         all_final_policies.append(final_pi)
         all_total_rewards.append(total_reward)
+    # Save npy results
+    np.save("./npy/qlearning/qlearning_ucb_accuracies.npy", np.array(all_accuracies))
+    np.save("./npy/qlearning/qlearning_ucb_rewards.npy", np.array(all_total_rewards))
+    np.save("./npy/qlearning/qlearning_ucb_densities.npy", policy_to_facility_density(all_final_policies[-1], act_dic, state_dic))
+    np.save("./npy/qlearning/qlearning_ucb_plot_matrix.npy", np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T)
 
     # Plot 1: individual accuracy
     piters = list(range(len(all_accuracies[0])))
@@ -299,6 +304,8 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
     # Plot 2: average accuracy
     pmean = list(map(statistics.mean, zip(*plot_accuracies)))
     pstdv = [statistics.stdev(list(col)) for col in zip(*plot_accuracies)]
+    np.save("./npy/qlearning/qlearning_ucb_avg_mean.npy", np.array(pmean))
+    np.save("./npy/qlearning/qlearning_ucb_avg_std.npy", np.array(pstdv))
     fig2 = plt.figure()
     clrs = sns.color_palette("husl", 3)
     ax = sns.lineplot(x=piters, y=pmean, color=clrs[0], label='Mean L1-accuracy')
