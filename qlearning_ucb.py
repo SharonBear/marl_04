@@ -183,8 +183,8 @@ import seaborn as sns
 import copy
 import statistics
 import itertools
+import os
 
-# 共用函式：將 Q 轉為 softmax policy
 def q_to_policy(Q, tau=1.0):
     policy = np.zeros_like(Q)
     for s in range(Q.shape[1]):
@@ -193,7 +193,6 @@ def q_to_policy(Q, tau=1.0):
     policy_sum = np.sum(policy, axis=2, keepdims=True)
     return policy / policy_sum
 
-# 共用函式：L1-accuracy
 def policy_accuracy(policy_pi, policy_star):
     total_dif = policy_pi.shape[0] * [0]
     for agent in range(policy_pi.shape[0]):
@@ -201,7 +200,6 @@ def policy_accuracy(policy_pi, policy_star):
             total_dif[agent] += np.sum(np.abs(policy_pi[agent][state] - policy_star[agent][state]))
     return np.sum(total_dif) / policy_pi.shape[0]
 
-# 將策略轉為密度（facility分布）
 def policy_to_facility_density(policy, act_dic, state_dic):
     N, S, A = policy.shape
     D = state_dic[0].m
@@ -213,8 +211,7 @@ def policy_to_facility_density(policy, act_dic, state_dic):
                     densities[s][f] += policy[i][s][a]
     return densities / N
 
-# 主訓練與繪圖程序
-def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=0.1, tau=1.0, runs=10):
+def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon=0.1, tau=1.0, runs=10):
     safe_state = CongGame(N, 1, [[1, 0], [2, 0], [4, 0], [6, 0]])
     distancing_state = CongGame(N, 1, [[1, -100], [2, -100], [4, -100], [6, -100]])
     state_dic = {0: safe_state, 1: distancing_state}
@@ -222,13 +219,15 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
     A = safe_state.num_actions
     act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
 
-    def get_next_state(state, actions):
+    def get_next_state(state, actions, t):
         acts = [act_dic[a] for a in actions]
         density = state_dic[state].get_counts(acts)
         max_density = max(density)
-        if state == 0 and max_density > N/2:
+        threshold = N/2
+        # threshold = random.randint(0, N)
+        if state == 0 and max_density > threshold:
             return 1
-        elif state == 1 and max_density <= N/4:
+        elif state == 1 and max_density <= N / 4:
             return 0
         return state
 
@@ -240,15 +239,18 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
     all_accuracies = []
     all_final_policies = []
     all_total_rewards = []
+    all_episode_rewards = []
 
     for run in range(runs):
         Q = np.ones((N, S, A))
         N_sa = np.zeros((N, S, A))
         policy_hist = []
         total_reward = 0
+        run_episode_rewards = []
 
         for episode in range(M):
             state = 0
+            episode_reward = 0
             for step in range(H):
                 actions = []
                 for i in range(N):
@@ -261,9 +263,9 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
 
                 acts = [act_dic[a] for a in actions]
                 rewards = get_reward(state_dic[state], acts)
-                next_state = get_next_state(state, actions)
+                next_state = get_next_state(state, actions, episode)
 
-                total_reward += sum(rewards)
+                episode_reward += sum(rewards)
 
                 for i in range(N):
                     a = actions[i]
@@ -273,7 +275,8 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
                                      (1 / N_sa[i][state][a]) * (rewards[i] + gamma * max_q)
                 state = next_state
 
-            # 儲存策略 policy（每 1 輪記一次）
+            run_episode_rewards.append(episode_reward)
+            total_reward += episode_reward
             pi = q_to_policy(Q, tau)
             policy_hist.append(copy.deepcopy(pi))
 
@@ -282,13 +285,17 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
         all_accuracies.append(run_accs)
         all_final_policies.append(final_pi)
         all_total_rewards.append(total_reward)
-    # Save npy results
+        all_episode_rewards.append(run_episode_rewards)
+
+    os.makedirs("./npy/qlearning", exist_ok=True)
+    os.makedirs("./pic/qlearning", exist_ok=True)
+
     np.save("./npy/qlearning/qlearning_ucb_accuracies.npy", np.array(all_accuracies))
     np.save("./npy/qlearning/qlearning_ucb_rewards.npy", np.array(all_total_rewards))
     np.save("./npy/qlearning/qlearning_ucb_densities.npy", policy_to_facility_density(all_final_policies[-1], act_dic, state_dic))
     np.save("./npy/qlearning/qlearning_ucb_plot_matrix.npy", np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T)
+    np.save("./npy/qlearning/qlearning_ucb_episode_rewards.npy", np.array(all_episode_rewards))
 
-    # Plot 1: individual accuracy
     piters = list(range(len(all_accuracies[0])))
     plot_accuracies = np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T
     fig1 = plt.figure()
@@ -301,7 +308,6 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
     plt.savefig("./pic/qlearning/qlearning_ucb_individual_runs.png", dpi=300)
     plt.close()
 
-    # Plot 2: average accuracy
     pmean = list(map(statistics.mean, zip(*plot_accuracies)))
     pstdv = [statistics.stdev(list(col)) for col in zip(*plot_accuracies)]
     np.save("./npy/qlearning/qlearning_ucb_avg_mean.npy", np.array(pmean))
@@ -318,7 +324,6 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
     plt.savefig("./pic/qlearning/qlearning_ucb_avg_runs.png", dpi=300)
     plt.close()
 
-    # Plot 3: facility distribution
     final_density = policy_to_facility_density(all_final_policies[-1], act_dic, state_dic)
     fig3, ax = plt.subplots()
     index = np.arange(safe_state.m)
@@ -334,7 +339,6 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
     plt.savefig("./pic/qlearning/qlearning_ucb_facilities.png", dpi=300)
     plt.close()
 
-    # Plot 4: cumulative reward
     fig4 = plt.figure()
     plt.plot(all_total_rewards, marker='o')
     plt.xlabel("Run")
@@ -344,13 +348,38 @@ def q_learning_ucb_experiment(N=8, H=20, M=500, gamma=0.99, samples=10, epsilon=
     plt.savefig("./pic/qlearning/qlearning_ucb_cumulative_reward.png", dpi=300)
     plt.close()
 
-    return fig1, fig2, fig3, fig4
+    optimal_per_episode = N * 6
+    regret_matrix = np.cumsum(optimal_per_episode - np.array(all_episode_rewards), axis=1)
+    np.save("./npy/qlearning/qlearning_ucb_episode_regret.npy", regret_matrix)
+
+    fig5 = plt.figure()
+    for r in range(runs):
+        plt.plot(range(M), regret_matrix[r], alpha=0.6)
+    plt.xlabel("Episode")
+    plt.ylabel("Cumulative Regret")
+    plt.title("Q-learning UCB: Cumulative Regret per Episode")
+    plt.grid(True)
+    plt.savefig("./pic/qlearning/qlearning_ucb_episode_regret.png", dpi=300)
+    plt.close()
+
+    episode_means = np.mean(all_episode_rewards, axis=0)
+    episode_stds = np.std(all_episode_rewards, axis=0)
+
+    plt.figure()
+    plt.plot(range(M), episode_means, label="Mean")
+    plt.fill_between(range(M), episode_means - episode_stds, episode_means + episode_stds, alpha=0.3)
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
+    plt.title("Q-learning UCB: Episode Reward (mean ± std)")
+    plt.grid(True)
+    plt.savefig("./pic/qlearning/qlearning_ucb_mean_std_episode_reward.png", dpi=300)
+    plt.close()
+    return fig1, fig2, fig3, fig4, fig5
 
 if __name__ == '__main__':
     start = process_time()
     q_learning_ucb_experiment(N=8, H=20, M=1001, epsilon=0.1, runs=10)
     print("Done. Time elapsed:", process_time() - start)
-
 
 # # run_qlearning_ucb_experiment.py
 # import numpy as np
