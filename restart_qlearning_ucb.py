@@ -8,7 +8,6 @@ import copy
 import statistics
 import itertools
 
-# 共用函式：將 Q 轉為 softmax policy
 def q_to_policy(Q, tau=1.0):
     policy = np.zeros_like(Q)
     for s in range(Q.shape[1]):
@@ -18,7 +17,6 @@ def q_to_policy(Q, tau=1.0):
         policy[:, s, :] = exp_q / exp_q_sum
     return policy
 
-# 共用函式：L1-accuracy
 def policy_accuracy(policy_pi, policy_star):
     total_dif = policy_pi.shape[0] * [0]
     for agent in range(policy_pi.shape[0]):
@@ -26,7 +24,6 @@ def policy_accuracy(policy_pi, policy_star):
             total_dif[agent] += np.sum(np.abs(policy_pi[agent][state] - policy_star[agent][state]))
     return np.sum(total_dif) / policy_pi.shape[0]
 
-# 將策略轉為密度（facility分布）
 def policy_to_facility_density(policy, act_dic, state_dic):
     N, S, A = policy.shape
     D = state_dic[0].m
@@ -38,21 +35,31 @@ def policy_to_facility_density(policy, act_dic, state_dic):
                     densities[s][f] += policy[i][s][a]
     return densities / N
 
-# 主訓練與繪圖程序
 def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon=0.1, tau=1.0, runs=10, restart_interval=200):
     safe_state = CongGame(N, 1, [[1, 0], [2, 0], [4, 0], [6, 0]])
     distancing_state = CongGame(N, 1, [[1, -100], [2, -100], [4, -100], [6, -100]])
-    state_dic = {0: safe_state, 1: distancing_state}
+    safe_reward_options = [
+        [[1, 0], [2, 0], [4, 0], [6, 0]],
+        [[2, 0], [1, 0], [6, 0], [4, 0]],
+        [[6, 0], [2, 0], [4, 0], [1, 0]],
+        [[4, 0], [6, 0], [2, 0], [1, 0]],
+    ]
+    distancing_reward_options = [
+        [[1, -100], [2, -100], [4, -100], [6, -100]],
+        [[2, -100], [1, -100], [6, -100], [4, -100]],
+        [[6, -100], [2, -100], [4, -100], [1, -100]],
+        [[4, -100], [6, -100], [2, -100], [1, -100]],
+    ]
+
     S = 2
     A = safe_state.num_actions
-    act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
 
     def get_next_state(state, actions, t):
         acts = [act_dic[a] for a in actions]
         density = state_dic[state].get_counts(acts)
         max_density = max(density)
         threshold = N / 2 - min(t // 200, 2)
-        if state == 0 and max_density > N/2:
+        if state == 0 and max_density > N / 2:
             return 1
         elif state == 1 and max_density <= N / 4:
             return 0
@@ -67,6 +74,7 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
     all_final_policies = []
     all_total_rewards = []
     all_episode_rewards = []
+    all_agent_rewards = []
 
     for run in range(runs):
         Q = np.ones((N, S, A))
@@ -74,14 +82,24 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
         policy_hist = []
         total_reward = 0
         run_episode_rewards = []
+        run_agent_rewards = []
 
         for episode in range(M):
             if episode % restart_interval == 0:
                 Q = np.ones((N, S, A))
                 N_sa = np.zeros((N, S, A))
 
+            index = ((episode % 160) // 40) % 4
+            safe_weights = safe_reward_options[index]
+            distancing_weights = distancing_reward_options[index]
+            safe_state = CongGame(N, 1, safe_weights)
+            distancing_state = CongGame(N, 1, distancing_weights)
+            state_dic = {0: safe_state, 1: distancing_state}
+            act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
+
             state = 0
             episode_reward = 0
+
             for step in range(H):
                 actions = []
                 for i in range(N):
@@ -104,10 +122,12 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
                     max_q = np.max(Q[i][next_state])
                     Q[i][state][a] = (1 - 1 / N_sa[i][state][a]) * Q[i][state][a] + \
                                      (1 / N_sa[i][state][a]) * (rewards[i] + gamma * max_q)
+
                 state = next_state
 
             total_reward += episode_reward
             run_episode_rewards.append(episode_reward)
+            run_agent_rewards.append(rewards)
             pi = q_to_policy(Q, tau)
             policy_hist.append(copy.deepcopy(pi))
 
@@ -117,12 +137,14 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
         all_final_policies.append(final_pi)
         all_total_rewards.append(total_reward)
         all_episode_rewards.append(run_episode_rewards)
+        all_agent_rewards.append(run_agent_rewards)
 
     np.save("./npy/r_qlearning/qlearning_ucb_restart_accuracies.npy", np.array(all_accuracies))
     np.save("./npy/r_qlearning/qlearning_ucb_restart_rewards.npy", np.array(all_total_rewards))
     np.save("./npy/r_qlearning/qlearning_ucb_restart_densities.npy", policy_to_facility_density(all_final_policies[-1], act_dic, state_dic))
     np.save("./npy/r_qlearning/qlearning_ucb_restart_plot_matrix.npy", np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T)
     np.save("./npy/r_qlearning/qlearning_ucb_restart_episode_rewards.npy", np.array(all_episode_rewards))
+    np.save("./npy/r_qlearning/qlearning_ucb_restart_agent_episode_rewards.npy", np.array(all_agent_rewards))
 
     piters = list(range(len(all_accuracies[0])))
     plot_accuracies = np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T
@@ -223,9 +245,73 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
     plt.savefig("./pic/r_qlearning/qlearning_ucb_restart_avg_reward_per_episode.png", dpi=300)
     plt.close()
 
+    # ✅ 新增 agent reward 曲線圖
+    fig = plt.figure()
+    all_agent_rewards = np.array(all_agent_rewards)
+    for agent in range(N):
+        agent_rewards = np.mean(all_agent_rewards[:, :, agent], axis=0)
+        plt.plot(range(M), agent_rewards, label=f'Agent {agent}')
+    plt.xlabel("Episode")
+    plt.ylabel("Reward")
+    plt.title("Restart Q-learning UCB: Per-agent Episode Rewards")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("./pic/r_qlearning/qlearning_ucb_restart_per_agent_reward_curve.png", dpi=300)
+    plt.close()
+    # (前略，其餘部分不變)
+
+    all_agent_rewards = np.array(all_agent_rewards)  # (runs, episodes, agents)
+
+    # ====== ✅ 累積與總 reward 統計 ======
+    agent_cumulative = np.cumsum(all_agent_rewards, axis=1)  # (runs, episodes, agents)
+    total_per_episode = np.sum(all_agent_rewards, axis=2)    # (runs, episodes)
+    total_cumulative = np.cumsum(total_per_episode, axis=1)  # (runs, episodes)
+
+    # ====== ✅ 儲存 npy 檔案 ======
+    np.save("./npy/r_qlearning/qlearning_ucb_restart_agent_episode_rewards.npy", all_agent_rewards)
+    np.save("./npy/r_qlearning/qlearning_ucb_restart_agent_cumulative_rewards.npy", agent_cumulative)
+    np.save("./npy/r_qlearning/qlearning_ucb_restart_total_per_episode_rewards.npy", total_per_episode)
+    np.save("./npy/r_qlearning/qlearning_ucb_restart_total_cumulative_rewards.npy", total_cumulative)
+
+    # ====== ✅ 繪圖：各 agent 的累積 reward 曲線圖 ======
+    fig = plt.figure()
+    for agent in range(N):
+        avg_cum = np.mean(agent_cumulative[:, :, agent], axis=0)
+        plt.plot(range(M), avg_cum, label=f'Agent {agent}')
+    plt.xlabel("Episode")
+    plt.ylabel("Cumulative Reward")
+    plt.title("Restart Q-learning UCB: Per-agent Cumulative Rewards")
+    plt.legend()
+    plt.grid(True)
+    plt.savefig("./pic/r_qlearning/qlearning_ucb_restart_per_agent_cumulative_reward.png", dpi=300)
+    plt.close()
+
+    # ====== ✅ 繪圖：所有 agent 的單集總 reward 曲線圖 ======
+    avg_total_per_episode = np.mean(total_per_episode, axis=0)
+    fig = plt.figure()
+    plt.plot(range(M), avg_total_per_episode)
+    plt.xlabel("Episode")
+    plt.ylabel("Total Reward")
+    plt.title("Restart Q-learning UCB: Total Reward per Episode (All Agents)")
+    plt.grid(True)
+    plt.savefig("./pic/r_qlearning/qlearning_ucb_restart_total_reward_per_episode.png", dpi=300)
+    plt.close()
+
+    # ====== ✅ 繪圖：所有 agent 的累積總 reward 曲線圖 ======
+    avg_total_cumulative = np.mean(total_cumulative, axis=0)
+    fig = plt.figure()
+    plt.plot(range(M), avg_total_cumulative)
+    plt.xlabel("Episode")
+    plt.ylabel("Cumulative Total Reward")
+    plt.title("Restart Q-learning UCB: Cumulative Total Reward (All Agents)")
+    plt.grid(True)
+    plt.savefig("./pic/r_qlearning/qlearning_ucb_restart_total_cumulative_reward.png", dpi=300)
+    plt.close()
+
+
     return
 
 if __name__ == '__main__':
     start = process_time()
-    q_learning_ucb_experiment(N=8, H=80, M=1001, epsilon=0.1, runs=10, restart_interval=200)
+    q_learning_ucb_experiment(N=8, H=80, M=5001, epsilon=0.1, runs=10, restart_interval=1000)
     print("Done. Time elapsed:", process_time() - start)

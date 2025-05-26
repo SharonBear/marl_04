@@ -151,39 +151,44 @@ def get_accuracies(policy_hist):
 
 def full_experiment(runs,iters,eta,T,samples):
 
-
     densities = np.zeros((S,M))
-
     raw_accuracies = []
+    all_agent_rewards_per_episode = []
+    all_agent_cum_rewards = []
+    total_rewards_per_episode = []
+
     for k in range(runs):
         policy_hist = policy_gradient([0.5, 0.5],iters,0.99,eta,T,samples)
         raw_accuracies.append(get_accuracies(policy_hist))
 
         converged_policy = policy_hist[-1]
+        agent_rewards = np.zeros((N, T))
+        total_rewards = np.zeros(T)
+
+        for ep in range(T):
+            curr_state = 0
+            ep_rewards = np.zeros(N)
+            for t in range(1):
+                actions = [pick_action(converged_policy[curr_state, i]) for i in range(N)]
+                rewards = get_reward(state_dic[curr_state], [act_dic[i] for i in actions])
+                ep_rewards += rewards
+                curr_state = get_next_state(curr_state, actions)
+            agent_rewards[:, ep] = ep_rewards
+            total_rewards[ep] = np.sum(ep_rewards)
+
+        all_agent_rewards_per_episode.append(agent_rewards)
+        all_agent_cum_rewards.append(np.cumsum(agent_rewards, axis=1))
+        total_rewards_per_episode.append(total_rewards)
+
         for i in range(N):
             for s in range(S):
                 densities[s] += converged_policy[s,i]
 
     densities = densities / runs
-    # 儲存 .npy 結果
-
-
-    #densities = densities / runs
-
-    # max_length = 0
-    # for j in range(runs):
-    #     max_length = max(max_length, len(raw_accuracies[j]))
-
-    # plot_accuracies = np.zeros((runs, max_length))
-
-    # for j in range(runs):
-    #     j_len = len(raw_accuracies[j])
-    #     plot_accuracies[j][:j_len] = raw_accuracies[j]
-    
     plot_accuracies = np.array(list(itertools.zip_longest(*raw_accuracies, fillvalue=np.nan))).T
-    
     clrs = sns.color_palette("husl", 3)
     piters = list(range(plot_accuracies.shape[1]))
+
 
     fig2 = plt.figure(figsize=(6,4))
     for i in range(len(plot_accuracies)):
@@ -237,12 +242,138 @@ def full_experiment(runs,iters,eta,T,samples):
     np.save("./npy/lrs/lrs_avg_mean.npy", np.array(pmean))
     np.save("./npy/lrs/lrs_avg_std.npy", np.array(pstdv))
     np.save("./npy/lrs/lrs_facility_density.npy", densities)
+
+    # iteration-based rewards
+    agent_reward_iteration_mean = np.zeros((N, len(policy_hist)))
+    agent_cum_reward_iteration_mean = np.zeros((N, len(policy_hist)))
+    total_reward_iteration_mean = np.zeros(len(policy_hist))
+    total_cum_reward_iteration_mean = np.zeros(len(policy_hist))
+
+    for t_idx, policy in enumerate(policy_hist):
+        all_rewards = np.zeros(N)
+        for _ in range(samples):
+            curr_state = 0
+            actions = [pick_action(policy[curr_state, i]) for i in range(N)]
+            rewards = get_reward(state_dic[curr_state], [act_dic[i] for i in actions])
+            all_rewards += rewards
+        agent_reward_iteration_mean[:, t_idx] = all_rewards / samples
+        total_reward_iteration_mean[t_idx] = np.sum(all_rewards) / samples
+
+    agent_cum_reward_iteration_mean = np.cumsum(agent_reward_iteration_mean, axis=1)
+    total_cum_reward_iteration_mean = np.cumsum(total_reward_iteration_mean)
+
+    fig8 = plt.figure()
+    for i in range(N):
+        plt.plot(range(len(policy_hist)), agent_reward_iteration_mean[i])
+    plt.xlabel("Iteration")
+    plt.ylabel("Agent Reward")
+    plt.title("Per-Agent Total Reward per Iteration")
+    plt.grid(True)
+    fig8.savefig("./pic/ord/ord_agent_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    fig9 = plt.figure()
+    for i in range(N):
+        plt.plot(range(len(policy_hist)), agent_cum_reward_iteration_mean[i])
+    plt.xlabel("Iteration")
+    plt.ylabel("Agent Cumulative Reward")
+    plt.title("Per-Agent Cumulative Reward per Iteration")
+    plt.grid(True)
+    fig9.savefig("./pic/ord/ord_agent_cumulative_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    fig10 = plt.figure()
+    plt.plot(range(len(policy_hist)), total_reward_iteration_mean)
+    plt.xlabel("Iteration")
+    plt.ylabel("Total Reward (All Agents)")
+    plt.title("Total Reward per Iteration")
+    plt.grid(True)
+    fig10.savefig("./pic/ord/ord_total_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    fig11 = plt.figure()
+    plt.plot(range(len(policy_hist)), total_cum_reward_iteration_mean)
+    plt.xlabel("Iteration")
+    plt.ylabel("Cumulative Total Reward")
+    plt.title("Cumulative Total Reward per Iteration")
+    plt.grid(True)
+    fig11.savefig("./pic/ord/ord_total_cumulative_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    np.save("./npy/ord/ord_agent_reward_per_iteration.npy", agent_reward_iteration_mean)
+    np.save("./npy/ord/ord_agent_cumulative_reward_per_iteration.npy", agent_cum_reward_iteration_mean)
+    np.save("./npy/ord/ord_total_reward_per_iteration.npy", total_reward_iteration_mean)
+    np.save("./npy/ord/ord_total_cumulative_reward_per_iteration.npy", total_cum_reward_iteration_mean)
+
+        # 新增四張圖和對應資料（以 iteration 為橫軸）
+    policy_hist = policy_gradient([0.5, 0.5], iters, 0.99, eta, T, samples)
+    agent_reward_iteration_mean = np.zeros((N, len(policy_hist)))
+    agent_cum_reward_iteration_mean = np.zeros((N, len(policy_hist)))
+    total_reward_iteration_mean = np.zeros(len(policy_hist))
+    total_cum_reward_iteration_mean = np.zeros(len(policy_hist))
+
+    for t_idx, policy in enumerate(policy_hist):
+        all_rewards = np.zeros(N)
+        for _ in range(samples):
+            curr_state = 0
+            actions = [pick_action(policy[curr_state, i]) for i in range(N)]
+            rewards = get_reward(state_dic[curr_state], [act_dic[i] for i in actions])
+            all_rewards += rewards
+        agent_reward_iteration_mean[:, t_idx] = all_rewards / samples
+        total_reward_iteration_mean[t_idx] = np.sum(all_rewards) / samples
+
+    agent_cum_reward_iteration_mean = np.cumsum(agent_reward_iteration_mean, axis=1)
+    total_cum_reward_iteration_mean = np.cumsum(total_reward_iteration_mean)
+
+    fig4 = plt.figure()
+    for i in range(N):
+        plt.plot(range(len(policy_hist)), agent_reward_iteration_mean[i])
+    plt.xlabel("Iteration")
+    plt.ylabel("Agent Reward")
+    plt.title("Per-Agent Reward per Iteration")
+    plt.grid(True)
+    fig4.savefig("./pic/lrs/lrs_agent_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    fig5 = plt.figure()
+    for i in range(N):
+        plt.plot(range(len(policy_hist)), agent_cum_reward_iteration_mean[i])
+    plt.xlabel("Iteration")
+    plt.ylabel("Agent Cumulative Reward")
+    plt.title("Per-Agent Cumulative Reward per Iteration")
+    plt.grid(True)
+    fig5.savefig("./pic/lrs/lrs_agent_cumulative_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    fig6 = plt.figure()
+    plt.plot(range(len(policy_hist)), total_reward_iteration_mean)
+    plt.xlabel("Iteration")
+    plt.ylabel("Total Reward (All Agents)")
+    plt.title("Total Reward per Iteration")
+    plt.grid(True)
+    fig6.savefig("./pic/lrs/lrs_total_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    fig7 = plt.figure()
+    plt.plot(range(len(policy_hist)), total_cum_reward_iteration_mean)
+    plt.xlabel("Iteration")
+    plt.ylabel("Cumulative Total Reward")
+    plt.title("Cumulative Total Reward per Iteration")
+    plt.grid(True)
+    fig7.savefig("./pic/lrs/lrs_total_cumulative_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    np.save("./npy/lrs/lrs_agent_reward_per_iteration.npy", agent_reward_iteration_mean)
+    np.save("./npy/lrs/lrs_agent_cumulative_reward_per_iteration.npy", agent_cum_reward_iteration_mean)
+    np.save("./npy/lrs/lrs_total_reward_per_iteration.npy", total_reward_iteration_mean)
+    np.save("./npy/lrs/lrs_total_cumulative_reward_per_iteration.npy", total_cum_reward_iteration_mean)
+
     return fig1, fig2, fig3
 
 eta = [np.random.uniform(.00005, .0005) for i in range(N)]
 
 #full_experiment(10,1000,eta,20,10)
-full_experiment(10,1000,eta,20,10)
+full_experiment(10,10000,eta,20,10)
 
 myp_end = process_time()
 elapsed_time = myp_end - myp_start
