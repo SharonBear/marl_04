@@ -23,7 +23,7 @@
 # #     # Q = np.random.uniform(0.5, 1.5, size=(N, S, A))
 # #     Q = np.ones((N, S, A))  # Q[agent][state][action]
 # #     N_sa = np.zeros((N, S, A))
-# #     episode_rewards = np.zeros((N, M))
+# #     iteration_rewards = np.zeros((N, M))
 
 # #     def get_next_state(state, actions):
 # #         acts = [act_dic[a] for a in actions]
@@ -35,7 +35,7 @@
 # #             return 0
 # #         return state
 
-# #     for episode in range(M):
+# #     for iteration in range(M):
 # #         state = 0
 # #         for step in range(H):
 # #             actions = []
@@ -55,18 +55,18 @@
 # #                 max_next_q = np.max(Q[i][next_state])
 # #                 Q[i][state][a] = (1 - 1 / N_sa[i][state][a]) * Q[i][state][a] + \
 # #                                  (1 / N_sa[i][state][a]) * (rewards[i] + gamma * max_next_q)
-# #                 episode_rewards[i][episode] += rewards[i]
+# #                 iteration_rewards[i][iteration] += rewards[i]
 
 # #             state = next_state
 
-# #     return episode_rewards, Q
+# #     return iteration_rewards, Q
 
 
-# # def plot_agent_rewards(episode_rewards):
-# #     N = episode_rewards.shape[0]
+# # def plot_agent_rewards(iteration_rewards):
+# #     N = iteration_rewards.shape[0]
 # #     for i in range(N):
-# #         plt.plot(episode_rewards[i], label=f"Agent {i}")
-# #     plt.xlabel("Episode")
+# #         plt.plot(iteration_rewards[i], label=f"Agent {i}")
+# #     plt.xlabel("iteration")
 # #     plt.ylabel("Cumulative Reward")
 # #     plt.title("Q-Learning-UCB Rewards per Agent")
 # #     plt.legend()
@@ -109,7 +109,7 @@
 
 # #     Q = np.ones((N, S, A))  # Q[agent][state][action]
 # #     N_sa = np.zeros((N, S, A))
-# #     episode_rewards = np.zeros((N, M))
+# #     iteration_rewards = np.zeros((N, M))
 
 # #     def get_next_state(state, actions):
 # #         acts = [act_dic[a] for a in actions]
@@ -121,7 +121,7 @@
 # #             return 0
 # #         return state
 
-# #     for episode in range(M):
+# #     for iteration in range(M):
 # #         state = 0
 # #         for step in range(H):
 # #             actions = []
@@ -144,18 +144,18 @@
 # #                 max_next_q = np.max(Q[i][next_state])
 # #                 Q[i][state][a] = (1 - 1 / N_sa[i][state][a]) * Q[i][state][a] + \
 # #                                  (1 / N_sa[i][state][a]) * (rewards[i] + gamma * max_next_q)
-# #                 episode_rewards[i][episode] += rewards[i]
+# #                 iteration_rewards[i][iteration] += rewards[i]
 
 # #             state = next_state
 
-# #     return episode_rewards, Q
+# #     return iteration_rewards, Q
 
 
-# # def plot_agent_rewards(episode_rewards):
-# #     N = episode_rewards.shape[0]
+# # def plot_agent_rewards(iteration_rewards):
+# #     N = iteration_rewards.shape[0]
 # #     for i in range(N):
-# #         plt.plot(episode_rewards[i], label=f"Agent {i}")
-# #     plt.xlabel("Episode")
+# #         plt.plot(iteration_rewards[i], label=f"Agent {i}")
+# #     plt.xlabel("iteration")
 # #     plt.ylabel("Cumulative Reward")
 # #     plt.title("Q-Learning-UCB Rewards per Agent")
 # #     plt.legend()
@@ -215,16 +215,28 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
     safe_state = CongGame(N, 1, [[1, 0], [2, 0], [4, 0], [6, 0]])
     distancing_state = CongGame(N, 1, [[1, -100], [2, -100], [4, -100], [6, -100]])
     state_dic = {0: safe_state, 1: distancing_state}
+    safe_reward_options = [
+    [[1, 0], [2, 0], [4, 0], [6, 0]],
+    [[2, 0], [1, 0], [6, 0], [4, 0]],
+    [[6, 0], [2, 0], [4, 0], [1, 0]],
+    [[4, 0], [6, 0], [2, 0], [1, 0]],
+    ]
+
+    distancing_reward_options = [
+    [[1, -100], [2, -100], [4, -100], [6, -100]],
+    [[2, -100], [1, -100], [6, -100], [4, -100]],
+    [[6, -100], [2, -100], [4, -100], [1, -100]],
+    [[4, -100], [6, -100], [2, -100], [1, -100]],
+    ]
     S = 2
     A = safe_state.num_actions
-    act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
+    # act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
 
     def get_next_state(state, actions, t):
         acts = [act_dic[a] for a in actions]
         density = state_dic[state].get_counts(acts)
         max_density = max(density)
         threshold = N/2
-        # threshold = random.randint(0, N)
         if state == 0 and max_density > threshold:
             return 1
         elif state == 1 and max_density <= N / 4:
@@ -239,18 +251,28 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
     all_accuracies = []
     all_final_policies = []
     all_total_rewards = []
-    all_episode_rewards = []
+    all_iteration_rewards = []
+    total_reward_per_iteration = np.zeros(M)
 
     for run in range(runs):
         Q = np.ones((N, S, A))
         N_sa = np.zeros((N, S, A))
         policy_hist = []
         total_reward = 0
-        run_episode_rewards = []
+        run_iteration_rewards = []
 
-        for episode in range(M):
+        for iteration in range(M):
+            index = ((iteration % 160) // 40) % 4
+            safe_weights = safe_reward_options[index]
+            distancing_weights = distancing_reward_options[index]
+            safe_state = CongGame(N, 1, safe_weights)
+            distancing_state = CongGame(N, 1, distancing_weights)
+            state_dic = {0: safe_state, 1: distancing_state}
+            
+            act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
+
             state = 0
-            episode_reward = 0
+            iteration_reward = 0
             for step in range(H):
                 actions = []
                 for i in range(N):
@@ -263,9 +285,9 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
 
                 acts = [act_dic[a] for a in actions]
                 rewards = get_reward(state_dic[state], acts)
-                next_state = get_next_state(state, actions, episode)
+                next_state = get_next_state(state, actions, iteration)
 
-                episode_reward += sum(rewards)
+                iteration_reward += sum(rewards)
 
                 for i in range(N):
                     a = actions[i]
@@ -275,8 +297,9 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
                                      (1 / N_sa[i][state][a]) * (rewards[i] + gamma * max_q)
                 state = next_state
 
-            run_episode_rewards.append(episode_reward)
-            total_reward += episode_reward
+            run_iteration_rewards.append(iteration_reward)
+            total_reward += iteration_reward
+            total_reward_per_iteration[iteration] += iteration_reward
             pi = q_to_policy(Q, tau)
             policy_hist.append(copy.deepcopy(pi))
 
@@ -285,7 +308,9 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
         all_accuracies.append(run_accs)
         all_final_policies.append(final_pi)
         all_total_rewards.append(total_reward)
-        all_episode_rewards.append(run_episode_rewards)
+        all_iteration_rewards.append(run_iteration_rewards)
+
+    cumulative_total_reward_per_iteration = np.cumsum(total_reward_per_iteration)
 
     os.makedirs("./npy/qlearning", exist_ok=True)
     os.makedirs("./pic/qlearning", exist_ok=True)
@@ -294,7 +319,9 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
     np.save("./npy/qlearning/qlearning_ucb_rewards.npy", np.array(all_total_rewards))
     np.save("./npy/qlearning/qlearning_ucb_densities.npy", policy_to_facility_density(all_final_policies[-1], act_dic, state_dic))
     np.save("./npy/qlearning/qlearning_ucb_plot_matrix.npy", np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T)
-    np.save("./npy/qlearning/qlearning_ucb_episode_rewards.npy", np.array(all_episode_rewards))
+    np.save("./npy/qlearning/qlearning_ucb_iteration_rewards.npy", np.array(all_iteration_rewards))
+    np.save("./npy/qlearning/qlearning_ucb_total_reward_per_iteration.npy", total_reward_per_iteration)
+    np.save("./npy/qlearning/qlearning_ucb_total_cumulative_reward.npy", cumulative_total_reward_per_iteration)
 
     piters = list(range(len(all_accuracies[0])))
     plot_accuracies = np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T
@@ -348,37 +375,113 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
     plt.savefig("./pic/qlearning/qlearning_ucb_cumulative_reward.png", dpi=300)
     plt.close()
 
-    optimal_per_episode = N * 6
-    regret_matrix = np.cumsum(optimal_per_episode - np.array(all_episode_rewards), axis=1)
-    np.save("./npy/qlearning/qlearning_ucb_episode_regret.npy", regret_matrix)
+    optimal_per_iteration = N * 6
+    regret_matrix = np.cumsum(optimal_per_iteration - np.array(all_iteration_rewards), axis=1)
+    np.save("./npy/qlearning/qlearning_ucb_iteration_regret.npy", regret_matrix)
 
     fig5 = plt.figure()
     for r in range(runs):
         plt.plot(range(M), regret_matrix[r], alpha=0.6)
-    plt.xlabel("Episode")
+    plt.xlabel("iteration")
     plt.ylabel("Cumulative Regret")
-    plt.title("Q-learning UCB: Cumulative Regret per Episode")
+    plt.title("Q-learning UCB: Cumulative Regret per iteration")
     plt.grid(True)
-    plt.savefig("./pic/qlearning/qlearning_ucb_episode_regret.png", dpi=300)
+    plt.savefig("./pic/qlearning/qlearning_ucb_iteration_regret.png", dpi=300)
     plt.close()
 
-    episode_means = np.mean(all_episode_rewards, axis=0)
-    episode_stds = np.std(all_episode_rewards, axis=0)
+    iteration_means = np.mean(all_iteration_rewards, axis=0)
+    iteration_stds = np.std(all_iteration_rewards, axis=0)
 
     plt.figure()
-    plt.plot(range(M), episode_means, label="Mean")
-    plt.fill_between(range(M), episode_means - episode_stds, episode_means + episode_stds, alpha=0.3)
-    plt.xlabel("Episode")
+    plt.plot(range(M), iteration_means, label="Mean")
+    plt.fill_between(range(M), iteration_means - iteration_stds, iteration_means + iteration_stds, alpha=0.3)
+    plt.xlabel("iteration")
     plt.ylabel("Reward")
-    plt.title("Q-learning UCB: Episode Reward (mean ± std)")
+    plt.title("Q-learning UCB: iteration Reward (mean ± std)")
     plt.grid(True)
-    plt.savefig("./pic/qlearning/qlearning_ucb_mean_std_episode_reward.png", dpi=300)
+    plt.savefig("./pic/qlearning/qlearning_ucb_mean_std_iteration_reward.png", dpi=300)
     plt.close()
-    return fig1, fig2, fig3, fig4, fig5
+
+    fig6 = plt.figure()
+    plt.plot(range(M), total_reward_per_iteration)
+    plt.xlabel("iteration")
+    plt.ylabel("Total Reward")
+    plt.title("Q-learning UCB: Total Reward per iteration (All Agents)")
+    plt.grid(True)
+    plt.savefig("./pic/qlearning/qlearning_ucb_total_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    fig7 = plt.figure()
+    plt.plot(range(M), cumulative_total_reward_per_iteration)
+    plt.xlabel("iteration")
+    plt.ylabel("Cumulative Total Reward")
+    plt.title("Q-learning UCB: Cumulative Total Reward up to iteration")
+    plt.grid(True)
+    plt.savefig("./pic/qlearning/qlearning_ucb_total_cumulative_reward.png", dpi=300)
+    plt.close()
+
+        # === New: Agent-Level Rewards ===
+    agent_reward_per_iteration = np.zeros((runs, N, M))
+    for run in range(runs):
+        Q = np.ones((N, S, A))
+        N_sa = np.zeros((N, S, A))
+        for iteration in range(M):
+            state = 0
+            rewards_this_iter = np.zeros(N)
+            for step in range(H):
+                actions = []
+                for i in range(N):
+                    if random.random() < epsilon:
+                        action = random.randint(0, A - 1)
+                    else:
+                        ucb_vals = Q[i][state] + np.array([ucb_bonus(N_sa[i][state][a], H) for a in range(A)])
+                        action = np.argmax(ucb_vals)
+                    actions.append(action)
+
+                acts = [act_dic[a] for a in actions]
+                rewards = get_reward(state_dic[state], acts)
+                next_state = get_next_state(state, actions, iteration)
+                for i in range(N):
+                    a = actions[i]
+                    N_sa[i][state][a] += 1
+                    max_q = np.max(Q[i][next_state])
+                    Q[i][state][a] = (1 - 1 / N_sa[i][state][a]) * Q[i][state][a] + \
+                                     (1 / N_sa[i][state][a]) * (rewards[i] + gamma * max_q)
+                rewards_this_iter = rewards
+                state = next_state
+            agent_reward_per_iteration[run, :, iteration] = rewards_this_iter
+
+    agent_reward_mean = np.mean(agent_reward_per_iteration, axis=0)  # shape (N, M)
+    agent_cumulative_reward_mean = np.cumsum(agent_reward_mean, axis=1)
+
+    np.save("./npy/qlearning/qlearning_ucb_agent_reward_per_iteration.npy", agent_reward_mean)
+    np.save("./npy/qlearning/qlearning_ucb_agent_cumulative_reward.npy", agent_cumulative_reward_mean)
+
+    fig8 = plt.figure()
+    for i in range(N):
+        plt.plot(range(M), agent_reward_mean[i])
+    plt.xlabel("Iteration")
+    plt.ylabel("Reward")
+    plt.title("Q-learning UCB: Per-Agent Reward per Iteration")
+    plt.grid(True)
+    plt.savefig("./pic/qlearning/qlearning_ucb_agent_reward_per_iteration.png", dpi=300)
+    plt.close()
+
+    fig9 = plt.figure()
+    for i in range(N):
+        plt.plot(range(M), agent_cumulative_reward_mean[i])
+    plt.xlabel("Iteration")
+    plt.ylabel("Cumulative Reward")
+    plt.title("Q-learning UCB: Per-Agent Cumulative Reward")
+    plt.grid(True)
+    plt.savefig("./pic/qlearning/qlearning_ucb_agent_cumulative_reward.png", dpi=300)
+    plt.close()
+
+    return fig1, fig2, fig3, fig4, fig5, fig6, fig7
 
 if __name__ == '__main__':
     start = process_time()
-    q_learning_ucb_experiment(N=8, H=20, M=1001, epsilon=0.1, runs=10)
+    q_learning_ucb_experiment(N=8, H=20, M=5001, epsilon=0.1, runs=10)
     print("Done. Time elapsed:", process_time() - start)
 
 # # run_qlearning_ucb_experiment.py
@@ -393,16 +496,16 @@ if __name__ == '__main__':
 # sns.set()
 
 # def q_learning_ucb_congestion(n_agents, n_states, n_actions, env_dict,
-#                                episodes=1000, H=20, bonus_scale=0.05, act_dic=None):
+#                                iterations=1000, H=20, bonus_scale=0.05, act_dic=None):
 #     Q = np.ones((n_states, n_agents, n_actions))
 #     V = np.ones((n_states, n_agents))
 #     N = np.zeros((n_states, n_agents, n_actions))
-#     rewards_history = np.zeros(episodes)
+#     rewards_history = np.zeros(iterations)
 #     agent_action_counts = np.zeros((n_states, n_actions))
 
-#     for episode in range(episodes):
+#     for iteration in range(iterations):
 #         state = 0
-#         episode_action_count = np.zeros((n_states, n_actions))
+#         iteration_action_count = np.zeros((n_states, n_actions))
 
 #         for h in range(H):
 #             actions = []
@@ -411,7 +514,7 @@ if __name__ == '__main__':
 #                     H**2 / (N[state, i] + 1e-6))
 #                 action = np.argmax(ucb_values)
 #                 actions.append(action)
-#                 episode_action_count[state, action] += 1
+#                 iteration_action_count[state, action] += 1
 
 #             act_profile = [act_dic[a] for a in actions]
 #             rewards = get_reward(env_dict[state], act_profile)
@@ -428,11 +531,11 @@ if __name__ == '__main__':
 #                 N[state, i, a] += 1
 
 #             state = next_state
-#             rewards_history[episode] += np.sum(rewards)
+#             rewards_history[iteration] += np.sum(rewards)
 
-#         agent_action_counts += episode_action_count
+#         agent_action_counts += iteration_action_count
 
-#     avg_action_density = agent_action_counts / episodes
+#     avg_action_density = agent_action_counts / iterations
 #     return Q, rewards_history, avg_action_density
 
 # def run_ucb_experiment():
@@ -446,7 +549,7 @@ if __name__ == '__main__':
 #     act_dic = build_act_dic(safe_state)
 
 #     runs = 10
-#     episodes = 1000
+#     iterations = 1000
 #     H = 20
 
 #     # os.makedirs("results", exist_ok=True)
@@ -456,7 +559,7 @@ if __name__ == '__main__':
 
 #     for run in range(runs):
 #         _, rewards, density = q_learning_ucb_congestion(
-#             N, S, M, state_dic, episodes, H, bonus_scale=0.05, act_dic=act_dic)
+#             N, S, M, state_dic, iterations, H, bonus_scale=0.05, act_dic=act_dic)
 #         all_rewards.append(rewards)
 #         all_densities += density
 
@@ -467,12 +570,12 @@ if __name__ == '__main__':
 #     np.save("./pic/qlearning/ucb_rewards.npy", plot_accuracies)
 #     np.save("./pic/qlearning/ucb_avg_densities.npy", avg_densities)
 
-#     # Figure 1: Reward per episode
+#     # Figure 1: Reward per iteration
 #     fig1 = plt.figure(figsize=(6, 4))
 #     for i in range(len(plot_accuracies)):
 #         plt.plot(range(plot_accuracies.shape[1]), plot_accuracies[i])
 #     plt.grid(linewidth=0.6)
-#     plt.xlabel('Episodes')
+#     plt.xlabel('iterations')
 #     plt.ylabel('Total Reward')
 #     plt.title(f'UCB Q-Learning: agents={N}, runs={runs}')
 #     fig1.savefig("./pic/qlearning/ucb_individual_rewards.png", bbox_inches='tight')
@@ -488,7 +591,7 @@ if __name__ == '__main__':
 #     ax.fill_between(range(len(pmean)), np.subtract(pmean, pstdv), np.add(pmean, pstdv), alpha=0.3, label='±1 std dev')
 #     ax.legend()
 #     plt.grid(linewidth=0.6)
-#     plt.xlabel('Episodes')
+#     plt.xlabel('iterations')
 #     plt.ylabel('Total Reward')
 #     plt.title(f'UCB Q-Learning: agents={N}, runs={runs}')
 #     fig2.savefig("./pic/qlearning/ucb_avg_rewards.png", bbox_inches='tight')

@@ -241,7 +241,20 @@ def policy_to_facility_density(policy, act_dic, state_dic):
 def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=0.1, tau=1.0, runs=10):
     safe_state = CongGame(N, 1, [[1, 0], [2, 0], [4, 0], [6, 0]])
     distancing_state = CongGame(N, 1, [[1, -100], [2, -100], [4, -100], [6, -100]])
-    state_dic = {0: safe_state, 1: distancing_state}
+    # state_dic = {0: safe_state, 1: distancing_state}
+    safe_reward_options = [
+    [[1, 0], [2, 0], [4, 0], [6, 0]],
+    [[2, 0], [1, 0], [6, 0], [4, 0]],
+    [[6, 0], [2, 0], [4, 0], [1, 0]],
+    [[4, 0], [6, 0], [2, 0], [1, 0]],
+    ]
+
+    distancing_reward_options = [
+    [[1, -100], [2, -100], [4, -100], [6, -100]],
+    [[2, -100], [1, -100], [6, -100], [4, -100]],
+    [[6, -100], [2, -100], [4, -100], [1, -100]],
+    [[4, -100], [6, -100], [2, -100], [1, -100]],
+    ]
     S = 2
     A = safe_state.num_actions
     act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
@@ -270,6 +283,15 @@ def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=
         for episode in range(M):
             state = 0
             episode_reward = 0
+            index = ((episode % 160) // 40) % 4
+            safe_weights = safe_reward_options[index]
+            distancing_weights = distancing_reward_options[index]
+            safe_state = CongGame(N, 1, safe_weights)
+            distancing_state = CongGame(N, 1, distancing_weights)
+            state_dic = {0: safe_state, 1: distancing_state}
+            
+            act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
+
 
             for step in range(H):
                 actions = []
@@ -392,9 +414,55 @@ def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=
     plt.grid(True)
     plt.savefig("./pic/epsilon_greedy/epsilon_greedy_mean_std_episode_reward.png", dpi=300)
     plt.close()
+    all_agent_rewards = np.array(all_episode_rewards)  # shape = (runs, M)
+    agent_rewards_per_episode = np.mean(all_agent_rewards, axis=0).reshape(1, -1)  # shape = (1, M)
+    agent_cum_rewards = np.cumsum(agent_rewards_per_episode, axis=1)
+    total_reward_per_episode = np.sum(all_agent_rewards, axis=0)  # shape = (M,)
+    total_cum_reward = np.cumsum(total_reward_per_episode)
 
+    np.save("./npy/epsilon_greedy/epsilon_greedy_agent_reward_per_episode.npy", agent_rewards_per_episode)
+    np.save("./npy/epsilon_greedy/epsilon_greedy_agent_cumulative_reward.npy", agent_cum_rewards)
+    np.save("./npy/epsilon_greedy/epsilon_greedy_total_reward_per_episode.npy", total_reward_per_episode)
+    np.save("./npy/epsilon_greedy/epsilon_greedy_total_cumulative_reward.npy", total_cum_reward)
+
+    plt.figure()
+    plt.plot(range(M), agent_rewards_per_episode[0])
+    plt.xlabel("Episode")
+    plt.ylabel("Average Agent Reward")
+    plt.title("Epsilon-Greedy: Agent Reward per Episode")
+    plt.grid(True)
+    plt.savefig("./pic/epsilon_greedy/epsilon_greedy_agent_reward_per_episode.png", dpi=300)
+    plt.close()
+
+    plt.figure()
+    plt.plot(range(M), agent_cum_rewards[0])
+    plt.xlabel("Episode")
+    plt.ylabel("Agent Cumulative Reward")
+    plt.title("Epsilon-Greedy: Agent Cumulative Reward")
+    plt.grid(True)
+    plt.savefig("./pic/epsilon_greedy/epsilon_greedy_agent_cumulative_reward.png", dpi=300)
+    plt.close()
+
+    plt.figure()
+    plt.plot(range(M), total_reward_per_episode)
+    plt.xlabel("Episode")
+    plt.ylabel("Total Reward (All Agents)")
+    plt.title("Epsilon-Greedy: Total Reward per Episode")
+    plt.grid(True)
+    plt.savefig("./pic/epsilon_greedy/epsilon_greedy_total_reward_per_episode.png", dpi=300)
+    plt.close()
+
+    plt.figure()
+    plt.plot(range(M), total_cum_reward)
+    plt.xlabel("Episode")
+    plt.ylabel("Cumulative Total Reward")
+    plt.title("Epsilon-Greedy: Cumulative Total Reward")
+    plt.grid(True)
+    plt.savefig("./pic/epsilon_greedy/epsilon_greedy_total_cumulative_reward.png", dpi=300)
+    plt.close()
+    
 
 if __name__ == '__main__':
     start = process_time()
-    q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, epsilon=0.1, runs=10)
+    q_learning_epsilon_greedy_experiment(N=8, H=20, M=5001, epsilon=0.1, runs=10)
     print("Done. Time elapsed:", process_time() - start)
