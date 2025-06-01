@@ -7,7 +7,8 @@ import copy
 import statistics
 import seaborn as sns; sns.set()
 from time import process_time
-
+import argparse
+from datetime import datetime
 myp_start = process_time()
 
 def projection_simplex_sort(v, z=1):
@@ -27,10 +28,21 @@ def projection_simplex_sort(v, z=1):
 # Define the states and some necessary info
 N = 8 #number of agents
 
-safe_state = CongGame(N,1,[[1,0],[2,0],[4,0],[6,0]])
-bad_state = CongGame(N,1,[[1,-120],[2,-130],[4,-140],[6,-150]])
+safe_state = CongGame(N,1,[[1, 0], [2, 0], [4, 0], [60, 0]])
+bad_state = CongGame(N,1,[[1, -100], [2, -100], [4, -100], [60, -100]])
 state_dic = {0: safe_state, 1: bad_state}
-
+safe_reward_options = [
+    [[1, 0], [2, 0], [4, 0], [60, 0]],
+    [[2, 0], [1, 0], [60, 0], [4, 0]],
+    [[60, 0], [2, 0], [4, 0], [1, 0]],
+    [[4, 0], [60, 0], [2, 0], [1, 0]],
+]
+distancing_reward_options = [
+    [[1, -100], [2, -100], [4, -100], [60, -100]],
+    [[2, -100], [1, -100], [60, -100], [4, -100]],
+    [[60, -100], [2, -100], [4, -100], [1, -100]],
+    [[4, -100], [60, -100], [2, -100], [1, -100]],
+]
 M = safe_state.num_actions 
 D = safe_state.m #number facilities
 S = 2
@@ -112,6 +124,15 @@ def policy_gradient(mu, max_iters, gamma, eta, T, samples):
     policy_hist = [copy.deepcopy(policy)]
 
     for t in range(max_iters):
+        # 動態變換 state reward
+        index = ((t % 40) // 10) % 4
+        index = 0
+        safe_weights = safe_reward_options[index]
+        distancing_weights = distancing_reward_options[index]
+        safe_state = CongGame(N, 1, safe_weights)
+        distancing_state = CongGame(N, 1, distancing_weights)
+        global state_dic  # 更新全域變數
+        state_dic = {0: safe_state, 1: distancing_state}
 
         if t % 50 == 0:
             print(t)
@@ -324,7 +345,7 @@ def full_experiment(runs,iters,eta,T,samples):
     plt.ylabel("Agent Cumulative Reward")
     plt.title("Per-Agent Cumulative Reward per Iteration")
     plt.grid(True)
-    fig9.savefig("./pic/ord/ord_agent_cumulative_reward_per_iteration.png", dpi=300)
+    fig9.savefig("./pic/ord/ord_agent_cumulative_reward.png", dpi=300)
     plt.close()
 
     fig10 = plt.figure()
@@ -342,7 +363,7 @@ def full_experiment(runs,iters,eta,T,samples):
     plt.ylabel("Cumulative Total Reward")
     plt.title("Cumulative Total Reward per Iteration")
     plt.grid(True)
-    fig11.savefig("./pic/ord/ord_total_cumulative_reward_per_iteration.png", dpi=300)
+    fig11.savefig("./pic/ord/ord_total_cumulative_reward.png", dpi=300)
     plt.close()
 
     # np.save("./npy/ord/ord_agent_reward_per_episode.npy", agent_reward_mean)
@@ -351,18 +372,39 @@ def full_experiment(runs,iters,eta,T,samples):
     # np.save("./npy/ord/ord_total_cumulative_reward.npy", total_cum_reward_mean)
 
     np.save("./npy/ord/ord_agent_reward_per_iteration.npy", agent_reward_iteration_mean)
-    np.save("./npy/ord/ord_agent_cumulative_reward_per_iteration.npy", agent_cum_reward_iteration_mean)
+    np.save("./npy/ord/ord_agent_cumulative_reward.npy", agent_cum_reward_iteration_mean)
     np.save("./npy/ord/ord_total_reward_per_iteration.npy", total_reward_iteration_mean)
-    np.save("./npy/ord/ord_total_cumulative_reward_per_iteration.npy", total_cum_reward_iteration_mean)
+    np.save("./npy/ord/ord_total_cumulative_reward.npy", total_cum_reward_iteration_mean)
 
     return fig1, fig2, fig3
 
-#full_experiment(10,1000,0.0001,20,10)
+# #full_experiment(10,1000,0.0001,20,10)
+# eta = [.0001 for i in range(N)]
 
-eta = [.0001 for i in range(N)]
+# full_experiment(10,10000,eta,20,10)
 
-full_experiment(10,10000,eta,20,10)
+# myp_end = process_time()
+# elapsed_time = myp_end - myp_start
+# print(elapsed_time)
 
-myp_end = process_time()
-elapsed_time = myp_end - myp_start
-print(elapsed_time)
+
+
+if __name__ == '__main__':
+    start = process_time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--m', type=int, default="5000",
+                        help="Choose reward episode: default=5001")
+    args = parser.parse_args()
+
+    log_lines = []
+    currentDateAndTime = datetime.now()
+    formatted_time = currentDateAndTime.strftime("%Y-%m-%d %H:%M:%S")
+    log_lines.append(f"<MPG_ord> {formatted_time}")
+    log_lines.append(f"Episode: {args.m}")
+    et1 = [.0001 for i in range(N)]
+    full_experiment(runs=10,iters=args.m,eta=et1,T=80,samples=10)
+    log_lines.append(f"Done. Time elapsed: {(process_time() - start):.4f} seconds\n")
+
+    with open("log.txt", "a") as f:
+        for line in log_lines:
+            f.write(line + "\n")

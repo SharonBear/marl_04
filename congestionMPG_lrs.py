@@ -6,6 +6,8 @@ import copy
 import statistics
 import seaborn as sns; sns.set()
 from time import process_time
+import argparse
+from datetime import datetime
 
 myp_start = process_time()
 
@@ -24,9 +26,23 @@ def projection_simplex_sort(v, z=1):
     return w
 
 # Define the states and some necessary info
-safe_state = CongGame(8,1,[[1,0],[2,0],[4,0],[6,0]])
-bad_state = CongGame(8,1,[[1,-100],[2,-100],[4,-100],[6,-100]])
+# safe_state = CongGame(8,1,[[1,0],[2,0],[4,0],[6,0]])
+# bad_state = CongGame(8,1,[[1,-100],[2,-100],[4,-100],[6,-100]])
+safe_state = CongGame(8,1,[[1, 0], [2, 0], [4, 0], [60, 0]])
+bad_state = CongGame(8,1,[[1, -100], [2, -100], [4, -100], [60, -100]])
 state_dic = {0: safe_state, 1: bad_state}
+safe_reward_options = [
+    [[1, 0], [2, 0], [4, 0], [60, 0]],
+    [[2, 0], [1, 0], [60, 0], [4, 0]],
+    [[60, 0], [2, 0], [4, 0], [1, 0]],
+    [[4, 0], [60, 0], [2, 0], [1, 0]],
+]
+distancing_reward_options = [
+    [[1, -100], [2, -100], [4, -100], [60, -100]],
+    [[2, -100], [1, -100], [60, -100], [4, -100]],
+    [[60, -100], [2, -100], [4, -100], [1, -100]],
+    [[4, -100], [60, -100], [2, -100], [1, -100]],
+]
 N = safe_state.n
 M = safe_state.num_actions 
 D = safe_state.m #number facilities
@@ -109,6 +125,15 @@ def policy_gradient(mu, max_iters, gamma, eta, T, samples):
     policy_hist = [copy.deepcopy(policy)]
 
     for t in range(max_iters):
+        # 動態變換 state reward
+        index = ((t % 40) // 10) % 4
+        index = 0
+        safe_weights = safe_reward_options[index]
+        distancing_weights = distancing_reward_options[index]
+        safe_state = CongGame(N, 1, safe_weights)
+        distancing_state = CongGame(N, 1, distancing_weights)
+        global state_dic  # 更新全域變數
+        state_dic = {0: safe_state, 1: distancing_state}
 
         if t % 50 == 0:
             print(t)
@@ -158,6 +183,7 @@ def full_experiment(runs,iters,eta,T,samples):
     total_rewards_per_episode = []
 
     for k in range(runs):
+        print(k)
         policy_hist = policy_gradient([0.5, 0.5],iters,0.99,eta,T,samples)
         raw_accuracies.append(get_accuracies(policy_hist))
 
@@ -262,49 +288,6 @@ def full_experiment(runs,iters,eta,T,samples):
     agent_cum_reward_iteration_mean = np.cumsum(agent_reward_iteration_mean, axis=1)
     total_cum_reward_iteration_mean = np.cumsum(total_reward_iteration_mean)
 
-    fig8 = plt.figure()
-    for i in range(N):
-        plt.plot(range(len(policy_hist)), agent_reward_iteration_mean[i])
-    plt.xlabel("Iteration")
-    plt.ylabel("Agent Reward")
-    plt.title("Per-Agent Total Reward per Iteration")
-    plt.grid(True)
-    fig8.savefig("./pic/ord/ord_agent_reward_per_iteration.png", dpi=300)
-    plt.close()
-
-    fig9 = plt.figure()
-    for i in range(N):
-        plt.plot(range(len(policy_hist)), agent_cum_reward_iteration_mean[i])
-    plt.xlabel("Iteration")
-    plt.ylabel("Agent Cumulative Reward")
-    plt.title("Per-Agent Cumulative Reward per Iteration")
-    plt.grid(True)
-    fig9.savefig("./pic/ord/ord_agent_cumulative_reward_per_iteration.png", dpi=300)
-    plt.close()
-
-    fig10 = plt.figure()
-    plt.plot(range(len(policy_hist)), total_reward_iteration_mean)
-    plt.xlabel("Iteration")
-    plt.ylabel("Total Reward (All Agents)")
-    plt.title("Total Reward per Iteration")
-    plt.grid(True)
-    fig10.savefig("./pic/ord/ord_total_reward_per_iteration.png", dpi=300)
-    plt.close()
-
-    fig11 = plt.figure()
-    plt.plot(range(len(policy_hist)), total_cum_reward_iteration_mean)
-    plt.xlabel("Iteration")
-    plt.ylabel("Cumulative Total Reward")
-    plt.title("Cumulative Total Reward per Iteration")
-    plt.grid(True)
-    fig11.savefig("./pic/ord/ord_total_cumulative_reward_per_iteration.png", dpi=300)
-    plt.close()
-
-    np.save("./npy/ord/ord_agent_reward_per_iteration.npy", agent_reward_iteration_mean)
-    np.save("./npy/ord/ord_agent_cumulative_reward_per_iteration.npy", agent_cum_reward_iteration_mean)
-    np.save("./npy/ord/ord_total_reward_per_iteration.npy", total_reward_iteration_mean)
-    np.save("./npy/ord/ord_total_cumulative_reward_per_iteration.npy", total_cum_reward_iteration_mean)
-
         # 新增四張圖和對應資料（以 iteration 為橫軸）
     policy_hist = policy_gradient([0.5, 0.5], iters, 0.99, eta, T, samples)
     agent_reward_iteration_mean = np.zeros((N, len(policy_hist)))
@@ -342,7 +325,7 @@ def full_experiment(runs,iters,eta,T,samples):
     plt.ylabel("Agent Cumulative Reward")
     plt.title("Per-Agent Cumulative Reward per Iteration")
     plt.grid(True)
-    fig5.savefig("./pic/lrs/lrs_agent_cumulative_reward_per_iteration.png", dpi=300)
+    fig5.savefig("./pic/lrs/lrs_agent_cumulative_reward.png", dpi=300)
     plt.close()
 
     fig6 = plt.figure()
@@ -360,21 +343,42 @@ def full_experiment(runs,iters,eta,T,samples):
     plt.ylabel("Cumulative Total Reward")
     plt.title("Cumulative Total Reward per Iteration")
     plt.grid(True)
-    fig7.savefig("./pic/lrs/lrs_total_cumulative_reward_per_iteration.png", dpi=300)
+    fig7.savefig("./pic/lrs/lrs_total_cumulative_reward.png", dpi=300)
     plt.close()
 
     np.save("./npy/lrs/lrs_agent_reward_per_iteration.npy", agent_reward_iteration_mean)
-    np.save("./npy/lrs/lrs_agent_cumulative_reward_per_iteration.npy", agent_cum_reward_iteration_mean)
+    np.save("./npy/lrs/lrs_agent_cumulative_reward.npy", agent_cum_reward_iteration_mean)
     np.save("./npy/lrs/lrs_total_reward_per_iteration.npy", total_reward_iteration_mean)
-    np.save("./npy/lrs/lrs_total_cumulative_reward_per_iteration.npy", total_cum_reward_iteration_mean)
+    np.save("./npy/lrs/lrs_total_cumulative_reward.npy", total_cum_reward_iteration_mean)
 
     return fig1, fig2, fig3
 
-eta = [np.random.uniform(.00005, .0005) for i in range(N)]
+# eta = [np.random.uniform(.00005, .0005) for i in range(N)]
 
-#full_experiment(10,1000,eta,20,10)
-full_experiment(10,10000,eta,20,10)
+# #full_experiment(10,1000,eta,20,10)
+# full_experiment(10,10000,eta,20,10)
 
-myp_end = process_time()
-elapsed_time = myp_end - myp_start
-print(elapsed_time)
+# myp_end = process_time()
+# elapsed_time = myp_end - myp_start
+# print(elapsed_time)
+
+
+if __name__ == '__main__':
+    start = process_time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--m', type=int, default="5000",
+                        help="Choose reward episode: default=5001")
+    args = parser.parse_args()
+
+    log_lines = []
+    currentDateAndTime = datetime.now()
+    formatted_time = currentDateAndTime.strftime("%Y-%m-%d %H:%M:%S")
+    log_lines.append(f"<MPG_lrs> {formatted_time}")
+    log_lines.append(f"Episode: {args.m}")
+    et1 = [np.random.uniform(.00005, .0005) for i in range(N)]
+    full_experiment(runs=10,iters=args.m,eta=et1,T=80,samples=10)
+    log_lines.append(f"Done. Time elapsed: {(process_time() - start):.4f} seconds\n")
+
+    with open("log.txt", "a") as f:
+        for line in log_lines:
+            f.write(line + "\n")
