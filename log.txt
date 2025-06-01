@@ -1,0 +1,175 @@
+<Restart_Qlearning> 2025-05-28 23:52:28
+Episode: 5001
+Restart interval: 75
+Done. Time elapsed: 271.7202 seconds
+
+<Qlearning> 2025-05-28 23:53:28
+Episode: 50
+Done. Time elapsed: 3.7893 seconds
+
+<Qlearning> 2025-05-28 23:57:45
+Episode: 5001
+Done. Time elapsed: 259.3621 seconds
+
+<MPG_ord> 2025-05-29 00:54:28
+Episode: 100
+Done. Time elapsed: 251.8359 seconds
+
+<MPG_lrs> 2025-05-29 00:54:18
+Episode: 100
+Done. Time elapsed: 273.0234 seconds
+
+<MPG_ord> 2025-05-29 01:05:59
+Episode: 100
+Done. Time elapsed: 244.7266 seconds
+
+<MPG_lrs> 2025-05-29 01:06:11
+Episode: 100
+Done. Time elapsed: 268.1709 seconds
+
+<MPG_lrs> 2025-05-29 01:13:04
+Episode: 100
+Done. Time elapsed: 267.7854 seconds
+
+<MPG_ord> 2025-05-29 01:13:28
+Episode: 100
+Done. Time elapsed: 246.9040 seconds
+
+<Qlearning> 2025-05-29 01:58:22
+Episode: 2001
+Done. Time elapsed: 106.0207 seconds
+
+Episode: 2001
+Restart interval: 56
+<Restart_Qlearning> 2025-05-29 02:09:37
+Done. Time elapsed: 107.0428 seconds
+
+<Greedy> 2025-05-29 02:11:38
+Episode: 2001
+Done. Time elapsed: 15.8057 seconds
+
+<Greedy> 2025-05-29 02:15:19
+Episode: 2001
+Done. Time elapsed: 16.0842 seconds
+
+<Greedy> 2025-05-29 02:17:25
+Episode: 2001
+Done. Time elapsed: 16.2471 seconds
+
+<Greedy> 2025-05-29 02:18:25
+Episode: 2001
+Done. Time elapsed: 16.0352 seconds
+
+<Greedy> 2025-05-29 02:19:09
+Episode: 2001
+Done. Time elapsed: 16.0742 seconds
+
+<Greedy> 2025-05-29 02:24:00
+Episode: 2001
+Done. Time elapsed: 15.4205 seconds
+
+<Greedy> 2025-05-29 02:24:32
+Episode: 2001
+Done. Time elapsed: 14.5669 seconds
+
+<MPG_ord> 2025-05-29 01:36:58
+Episode: 2000
+Done. Time elapsed: 4935.5173 seconds
+
+<MPG_lrs> 2025-05-29 01:32:51
+Episode: 2000
+Done. Time elapsed: 5413.0922 seconds
+
+Episode: 2001
+Restart interval: 56
+<Restart_Qlearning> 2025-05-29 03:55:27
+Done. Time elapsed: 94.9260 seconds
+
+<Qlearning> 2025-05-29 03:56:28
+Episode: 2001
+Done. Time elapsed: 101.1537 seconds
+
+<Greedy> 2025-05-29 04:00:15
+Episode: 2001
+Done. Time elapsed: 15.9191 seconds
+
+<MPG_ord> 2025-05-29 03:57:22
+Episode: 2000
+Done. Time elapsed: 5060.4566 seconds
+
+<MPG_lrs> 2025-05-29 03:57:04
+Episode: 2000
+Done. Time elapsed: 5558.1173 seconds
+
+Episode: 501
+Restart interval: 75
+<Restart_Qlearning> 2025-05-29 10:14:29
+Done. Time elapsed: 24.1493 seconds
+
+Episode: 501
+Restart interval: 75
+<Restart_Qlearning> 2025-05-29 10:16:22
+Done. Time elapsed: 24.2494 seconds
+
+Episode: 501
+Restart interval: 75
+<Restart_Qlearning> 2025-05-29 10:18:09
+Done. Time elapsed: 24.3171 seconds
+
+<Greedy> 2025-05-29 10:19:52
+Episode: 501
+Done. Time elapsed: 4.1425 seconds
+
+<Greedy> 2025-05-29 10:20:36
+Episode: 501
+Done. Time elapsed: 4.2110 seconds
+
+<Greedy> 2025-05-29 10:21:04
+Episode: 501
+Done. Time elapsed: 4.3343 seconds
+
+<Greedy> 2025-05-29 10:24:32
+Episode: 501
+Done. Time elapsed: 4.1424 seconds
+
+<Greedy> 2025-05-29 10:25:06
+Episode: 501
+Done. Time elapsed: 4.2674 seconds
+
+<Greedy> 2025-05-29 10:25:32
+Episode: 501
+Done. Time elapsed: 4.2407 seconds
+
+<Greedy> 2025-05-29 10:26:04
+Episode: 501
+Done. Time elapsed: 4.2679 seconds
+
+<Greedy> 2025-05-29 10:26:25
+Episode: 2001
+Done. Time elapsed: 14.0038 seconds
+
+<Greedy> 2025-05-29 10:27:39
+Episode: 2001
+Done. Time elapsed: 13.8468 seconds
+
+<Greedy> 2025-05-29 10:28:22
+Episode: 2001
+Done. Time elapsed: 13.2486 seconds
+
+<Greedy> 2025-05-29 10:29:41
+Episode: 2001
+Done. Time elapsed: 13.7646 seconds
+
+<Greedy> 2025-05-29 10:31:09
+Episode: 2001
+Done. Time elapsed: 14.6367 seconds
+
+<Greedy> 2025-05-29 11:31:56
+Episode: 2001
+Done. Time elapsed: 14.2249 seconds
+
+Episode: 2001
+Restart interval: 75
+<Restart_Qlearning> 2025-05-29 11:31:28
+Done. Time elapsed: 93.0286 seconds
+

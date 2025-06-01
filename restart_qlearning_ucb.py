@@ -35,7 +35,7 @@ def policy_to_facility_density(policy, act_dic, state_dic):
                     densities[s][f] += policy[i][s][a]
     return densities / N
 
-def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon=0.1, tau=1.0, runs=10, restart_interval=200):
+def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon=0.1, tau=1.0, runs=10, restart_interval=76):
     safe_state = CongGame(N, 1, [[1, 0], [2, 0], [4, 0], [6, 0]])
     distancing_state = CongGame(N, 1, [[1, -100], [2, -100], [4, -100], [6, -100]])
     safe_reward_options = [
@@ -90,6 +90,7 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
                 N_sa = np.zeros((N, S, A))
 
             index = ((episode % 160) // 40) % 4
+            index = 0
             safe_weights = safe_reward_options[index]
             distancing_weights = distancing_reward_options[index]
             safe_state = CongGame(N, 1, safe_weights)
@@ -313,5 +314,5 @@ def q_learning_ucb_experiment(N=8, H=20, M=1001, gamma=0.99, samples=10, epsilon
 
 if __name__ == '__main__':
     start = process_time()
-    q_learning_ucb_experiment(N=8, H=80, M=5001, epsilon=0.1, runs=10, restart_interval=1000)
+    q_learning_ucb_experiment(N=8, H=80, M=5001, epsilon=0.1, runs=10, restart_interval=7600)
     print("Done. Time elapsed:", process_time() - start)

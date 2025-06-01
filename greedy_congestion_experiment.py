@@ -204,6 +204,8 @@ import statistics
 import itertools
 from congestion_games import *
 from time import process_time
+import argparse
+from datetime import datetime
 
 # def q_to_policy(Q, tau=1.0):
 #     policy = np.zeros_like(Q)
@@ -238,23 +240,34 @@ def policy_to_facility_density(policy, act_dic, state_dic):
                     densities[s][f] += policy[i][s][a]
     return densities / N
 
-def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=0.1, tau=1.0, runs=10):
+def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=0.1, tau=1.0, runs=10, mode="random"):
     safe_state = CongGame(N, 1, [[1, 0], [2, 0], [4, 0], [6, 0]])
     distancing_state = CongGame(N, 1, [[1, -100], [2, -100], [4, -100], [6, -100]])
     # state_dic = {0: safe_state, 1: distancing_state}
     safe_reward_options = [
-    [[1, 0], [2, 0], [4, 0], [6, 0]],
-    [[2, 0], [1, 0], [6, 0], [4, 0]],
-    [[6, 0], [2, 0], [4, 0], [1, 0]],
-    [[4, 0], [6, 0], [2, 0], [1, 0]],
+        [[1, 0], [2, 0], [4, 0], [60, 0]],
+        [[2, 0], [1, 0], [60, 0], [4, 0]],
+        [[60, 0], [2, 0], [4, 0], [1, 0]],
+        [[4, 0], [60, 0], [2, 0], [1, 0]],
     ]
-
     distancing_reward_options = [
-    [[1, -100], [2, -100], [4, -100], [6, -100]],
-    [[2, -100], [1, -100], [6, -100], [4, -100]],
-    [[6, -100], [2, -100], [4, -100], [1, -100]],
-    [[4, -100], [6, -100], [2, -100], [1, -100]],
+        [[1, -100], [2, -100], [4, -100], [60, -100]],
+        [[2, -100], [1, -100], [60, -100], [4, -100]],
+        [[60, -100], [2, -100], [4, -100], [1, -100]],
+        [[4, -100], [60, -100], [2, -100], [1, -100]],
     ]
+    # safe_reward_options = [
+    #     [[1, 0], [2, 0], [4, 0], [25, 0]],
+    #     [[2, 0], [1, 0], [25, 0], [4, 0]],
+    #     [[25, 0], [2, 0], [4, 0], [1, 0]],
+    #     [[4, 0], [25, 0], [2, 0], [1, 0]],
+    # ]
+    # distancing_reward_options = [
+    #     [[1, -100], [2, -100], [4, -100], [25, -100]],
+    #     [[2, -100], [1, -100], [25, -100], [4, -100]],
+    #     [[25, -100], [2, -100], [4, -100], [1, -100]],
+    #     [[4, -100], [25, -100], [2, -100], [1, -100]],
+    # ]
     S = 2
     A = safe_state.num_actions
     act_dic = {idx: act for idx, act in enumerate(safe_state.actions)}
@@ -283,7 +296,12 @@ def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=
         for episode in range(M):
             state = 0
             episode_reward = 0
-            index = ((episode % 160) // 40) % 4
+            if mode == "stationary":
+                index = 0
+            else:
+                index = ((episode % 40) // 10) % 4
+            index = 0
+            # index = ((episode % 160) // 40) % 4
             safe_weights = safe_reward_options[index]
             distancing_weights = distancing_reward_options[index]
             safe_state = CongGame(N, 1, safe_weights)
@@ -334,7 +352,7 @@ def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=
     np.save("./npy/epsilon_greedy/epsilon_greedy_rewards.npy", np.array(all_total_rewards))
     np.save("./npy/epsilon_greedy/epsilon_greedy_densities.npy", policy_to_facility_density(all_final_policies[-1], act_dic, state_dic))
     np.save("./npy/epsilon_greedy/epsilon_greedy_plot_matrix.npy", np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T)
-    np.save("./npy/epsilon_greedy/epsilon_greedy_episode_rewards.npy", np.array(all_episode_rewards))
+    np.save("./npy/epsilon_greedy/epsilon_greedy_iteration_rewards.npy", np.array(all_episode_rewards))
 
     piters = list(range(len(all_accuracies[0])))
     plot_accuracies = np.array(list(itertools.zip_longest(*all_accuracies, fillvalue=np.nan))).T
@@ -379,7 +397,7 @@ def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=
     plt.savefig("./pic/epsilon_greedy/epsilon_greedy_facilities.png", dpi=300)
     plt.close()
 
-    fig4 = plt.figure()
+    plt.figure()
     plt.plot(all_total_rewards, marker='o')
     plt.xlabel("Run")
     plt.ylabel("Cumulative Reward")
@@ -390,9 +408,9 @@ def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=
 
     optimal_per_episode = N * 6
     regret_matrix = np.cumsum(optimal_per_episode - np.array(all_episode_rewards), axis=1)
-    np.save("./npy/epsilon_greedy/epsilon_greedy_episode_regret.npy", regret_matrix)
+    np.save("./npy/epsilon_greedy/epsilon_greedy_iteration_regret.npy", regret_matrix)
 
-    fig5 = plt.figure()
+    plt.figure()
     for r in range(runs):
         plt.plot(range(M), regret_matrix[r], alpha=0.6)
     plt.xlabel("Episode")
@@ -420,9 +438,9 @@ def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=
     total_reward_per_episode = np.sum(all_agent_rewards, axis=0)  # shape = (M,)
     total_cum_reward = np.cumsum(total_reward_per_episode)
 
-    np.save("./npy/epsilon_greedy/epsilon_greedy_agent_reward_per_episode.npy", agent_rewards_per_episode)
+    np.save("./npy/epsilon_greedy/epsilon_greedy_agent_reward_per_iteration.npy", agent_rewards_per_episode)
     np.save("./npy/epsilon_greedy/epsilon_greedy_agent_cumulative_reward.npy", agent_cum_rewards)
-    np.save("./npy/epsilon_greedy/epsilon_greedy_total_reward_per_episode.npy", total_reward_per_episode)
+    np.save("./npy/epsilon_greedy/epsilon_greedy_total_reward_per_iteration.npy", total_reward_per_episode)
     np.save("./npy/epsilon_greedy/epsilon_greedy_total_cumulative_reward.npy", total_cum_reward)
 
     plt.figure()
@@ -463,6 +481,24 @@ def q_learning_epsilon_greedy_experiment(N=8, H=20, M=1001, gamma=0.99, epsilon=
     
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--mode', type=str, default="random", choices=["stationary", "random"],
+                        help="Choose reward mode: 'stationary' or 'random'")
+    parser.add_argument('--m', type=int, default="5000",
+                        help="Choose reward episode: default=5001")
+    args = parser.parse_args()
+    
     start = process_time()
-    q_learning_epsilon_greedy_experiment(N=8, H=20, M=5001, epsilon=0.1, runs=10)
-    print("Done. Time elapsed:", process_time() - start)
+    log_lines = []
+    currentDateAndTime = datetime.now()
+    formatted_time = currentDateAndTime.strftime("%Y-%m-%d %H:%M:%S")
+    log_lines.append(f"<Greedy> {formatted_time}")
+    log_lines.append(f"Episode: {args.m}")
+    q_learning_epsilon_greedy_experiment(N=8, H=20, M=args.m, epsilon=0.1, runs=10, mode=args.mode)
+    # print(f"Mode: {args.mode}")
+    # print("Done. Time elapsed:", process_time() - start)
+    
+    log_lines.append(f"Done. Time elapsed: {(process_time() - start):.4f} seconds\n")
+    with open("log.txt", "a") as f:
+        for line in log_lines:
+            f.write(line + "\n")
